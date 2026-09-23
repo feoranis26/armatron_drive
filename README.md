@@ -10,5 +10,6 @@ the motor-enable line. Shutdown also deasserts that line.
 
 `systemd/armatron-drive.service` is a source-controlled unit for this process.
 It preserves the current `taskset -c 3` affinity and uses `Restart=no`. Review
-the workspace path, copy it to `/etc/systemd/system/`, and validate it with
-`systemd-analyze verify` before enabling it.
+the workspace path, run `sudo ./systemd/install.sh` to link it into
+`/etc/systemd/system/`, and validate it with `systemd-analyze verify` before
+enabling it.
