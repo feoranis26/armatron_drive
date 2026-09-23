@@ -122,11 +122,30 @@ void UDPControl::proc_recv()
         args[args.size() - 1].push_back(c);
     }
 
+    if (args.size() == 1 && args[0] == "safety_stop")
+    {
+        safety_inhibited.store(true);
+        command_timed_out.store(true);
+        driver->stop_for_command_timeout();
+        printf("Drive safety inhibit latched.\n");
+        return;
+    }
+
+    if (args.size() == 1 && args[0] == "safety_reset")
+    {
+        safety_inhibited.store(false);
+        printf("Drive safety inhibit reset; awaiting a fresh motion command.\n");
+        return;
+    }
+
     if (args.size() == 4 && args[0] == "whl")
     {
         double x = atof(args[1].c_str());
         double y = atof(args[2].c_str());
         double th = atof(args[3].c_str());
+
+        if (safety_inhibited.load())
+            return;
 
         driver->set_velocity(chassis_speeds_t{x, y, th});
         driver->set_motor_enable(true);
@@ -147,12 +166,12 @@ void UDPControl::send_telemetry()
     chassis_speeds_t spd = driver->get_velocity();
     chassis_position_t pos = driver->get_position();
 
-    int len = snprintf(nullptr, 0, "pos:%f,%f;spd:%f,%f,%f;", pos.x, pos.y, spd.x, spd.y, spd.th);
+    int len = snprintf(nullptr, 0, "pos:%f,%f;spd:%f,%f,%f;safety:%d;", pos.x, pos.y, spd.x, spd.y, spd.th, safety_inhibited.load());
 
-    std::unique_ptr<char[]> buf(new char[len]);
+    std::unique_ptr<char[]> buf(new char[len + 1]);
 
-    snprintf(buf.get(), len, "pos:%f,%f;spd:%f,%f,%f;", pos.x, pos.y, spd.x, spd.y, spd.th);
-    std::string str(buf.get(), buf.get() + len - 1);
+    snprintf(buf.get(), len + 1, "pos:%f,%f;spd:%f,%f,%f;safety:%d;", pos.x, pos.y, spd.x, spd.y, spd.th, safety_inhibited.load());
+    std::string str(buf.get(), buf.get() + len);
 
     send(str);
 }

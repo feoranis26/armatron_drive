@@ -37,6 +37,9 @@ private:
     bool connected = false;
     std::atomic<bool> stop_flag{false};
     std::atomic<bool> command_timed_out{false};
+    // A safety fault is intentionally independent of command timeout.  It is
+    // cleared only by an explicit packet from the supervisory computer.
+    std::atomic<bool> safety_inhibited{false};
     std::atomic<std::int64_t> last_command_ms{0};
 
     thread *send_thread = nullptr;
