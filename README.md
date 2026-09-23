@@ -13,3 +13,12 @@ It preserves the current `taskset -c 3` affinity and uses `Restart=no`. Review
 the workspace path, run `sudo ./systemd/install.sh` to link it into
 `/etc/systemd/system/`, and validate it with `systemd-analyze verify` before
 enabling it.
+
+For a normal refresh from the workspace root, run:
+
+```text
+./src/armatron_drive/systemd/refresh.sh
+```
+
+It builds as the invoking user, relinks the unit, reloads systemd, and restarts
+only `armatron-drive.service`.
