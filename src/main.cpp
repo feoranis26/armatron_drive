@@ -7,8 +7,8 @@
 #include <chrono>
 #include <thread>
 #include <csignal>
+#include <cassert>
 
-#include "stepper.h"
 #include "whl_driver.h"
 #include "udp_control.h"
 #include "stepper.h"
@@ -18,6 +18,7 @@ using namespace std;
 StepperWaveformTransmitter *tx;
 WheelDriver *driver;
 UDPControl *udp;
+volatile std::sig_atomic_t shutdown_requested = 0;
 
 void startup()
 {
@@ -69,23 +70,29 @@ void stop()
 {
     printf("Shutting down\n");
 
-    tx->stop();
-    driver->stop();
-    udp->stop();
+    // Stop ingress first, then deassert motor enable before stopping the
+    // waveform generator. This is normal-thread code, never a signal handler.
+    if (udp != nullptr)
+        udp->stop();
+    if (driver != nullptr)
+        driver->stop();
+    if (tx != nullptr)
+        tx->stop();
 
     gpioTerminate();
 
+    delete udp;
     delete driver;
     delete tx;
-    delete udp;
+
+    udp = nullptr;
+    driver = nullptr;
+    tx = nullptr;
 }
 
-
-void fatal(int sg)
+void request_shutdown(int)
 {
-    stop();
-
-    exit(EXIT_FAILURE);
+    shutdown_requested = 1;
 }
 
 
@@ -95,15 +102,16 @@ int main()
     cfg |= PI_CFG_NOSIGHANDLER; // (1<<10)
     gpioCfgSetInternals(cfg);
 
-    signal(SIGTERM, fatal);
-    signal(SIGSEGV, fatal);
-    signal(SIGABRT, fatal);
-    signal(SIGINT, fatal);
+    signal(SIGTERM, request_shutdown);
+    signal(SIGINT, request_shutdown);
 
     startup();
 
-    while (true)
+    while (!shutdown_requested)
     {
         sleep_for(seconds(1));
     }
+
+    stop();
+    return EXIT_SUCCESS;
 }
