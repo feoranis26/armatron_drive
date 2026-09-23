@@ -11,6 +11,7 @@
 #include <cstdint>
 
 #include "whl_driver.h"
+#include "control_packet.h"
 
 #define MAX_BUFFER 1024
 #define PKT_HEADER 0xFA
@@ -26,7 +27,7 @@ private:
     void recv_thread_loop();
 
     void recv();
-    void proc_recv();
+    void proc_recv(const armatron::Command& command);
 
     void send_telemetry();
     void send(std::string data);

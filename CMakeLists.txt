@@ -29,6 +29,10 @@ install(PROGRAMS
 # find_package(<dependency> REQUIRED)
 
 if(BUILD_TESTING)
+  enable_testing()
+  add_executable(test_control_packet test/test_control_packet.cpp)
+  target_include_directories(test_control_packet PRIVATE include/armatron_drive)
+  add_test(NAME control_packet COMMAND test_control_packet)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
   # comment the line when a copyright and license is added to all source files

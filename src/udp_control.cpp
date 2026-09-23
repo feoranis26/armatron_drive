@@ -81,73 +81,45 @@ void UDPControl::recv()
 
     int len = recvfrom(sock, buffer.data(), buffer.size(), 0, (sockaddr *)&recv_addr, &addr_len);
 
-    if (len <= 0)
+    if (len < 2)
         return;
 
-    // printf("Received %d bytes\n", len);
-
-    // char ip_str[INET_ADDRSTRLEN];
-    // inet_ntop(AF_INET, &recv_addr.sin_addr, ip_str, INET_ADDRSTRLEN);
-
-    // printf("received from %s:%d", ip_str, ntohs(recv_addr.sin_port));
-
-    buffer[len] = '\0';
-
-    if (buffer[0] != PKT_HEADER || buffer[len - 1] != PKT_FOOTER)
+    armatron::Command command;
+    if (!armatron::decode_control_packet(buffer.data(), len, command))
     {
         printf("Invalid packet received.\n");
         return;
     }
 
-    proc_recv();
+    // Parse only the received payload, excluding framing bytes. No write past
+    // the buffer on a full-sized datagram and no footer in single-word commands.
+    proc_recv(command);
 }
 
-void UDPControl::proc_recv()
+void UDPControl::proc_recv(const armatron::Command& command)
 {
-    std::vector<std::string> args;
-    args.push_back(std::string());
-
-    //printf("%s\n", buffer.data());
-
-    for (int i = 1; i < buffer.size() - 1; i++)
-    { // remove header and footer
-        char c = buffer[i];
-
-        if (c == ' ')
-            args.push_back(std::string());
-
-        if (c == '\0')
-            break;
-
-        args[args.size() - 1].push_back(c);
-    }
-
-    if (args.size() == 1 && args[0] == "safety_stop")
+    if (command.kind == armatron::CommandKind::stop)
     {
-        safety_inhibited.store(true);
         command_timed_out.store(true);
         driver->stop_for_command_timeout();
+        safety_inhibited.store(true);
         printf("Drive safety inhibit latched.\n");
         return;
     }
 
-    if (args.size() == 1 && args[0] == "safety_reset")
+    if (command.kind == armatron::CommandKind::reset)
     {
         safety_inhibited.store(false);
         printf("Drive safety inhibit reset; awaiting a fresh motion command.\n");
         return;
     }
 
-    if (args.size() == 4 && args[0] == "whl")
+    if (command.kind == armatron::CommandKind::motion)
     {
-        double x = atof(args[1].c_str());
-        double y = atof(args[2].c_str());
-        double th = atof(args[3].c_str());
-
         if (safety_inhibited.load())
             return;
 
-        driver->set_velocity(chassis_speeds_t{x, y, th});
+        driver->set_velocity(chassis_speeds_t{command.x, command.y, command.yaw});
         driver->set_motor_enable(true);
         last_command_ms.store(std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now().time_since_epoch()).count());

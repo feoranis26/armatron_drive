@@ -22,3 +22,13 @@ For a normal refresh from the workspace root, run:
 
 It builds as the invoking user, relinks the unit, reloads systemd, and restarts
 only `armatron-drive.service`.
+
+Framed `safety_stop` and `safety_reset` UDP commands latch and release propulsion
+inhibition. The parser strips both framing bytes and validates finite numeric
+motion commands. Telemetry includes `safety:1;` or `safety:0;`; the x86 bridge
+retries requests until it observes this feedback. While inhibited, all `whl`
+commands are ignored. Reset only clears inhibition; a subsequent command is
+needed to enable the motors. Automatic re-arm policy lives in the x86 monitor.
+
+`test_control_packet` (CTest) checks framed stop/reset, motion decoding, malformed
+numbers, and full-sized datagrams independently of GPIO hardware.
