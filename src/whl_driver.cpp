@@ -18,6 +18,7 @@ WheelDriver::WheelDriver(int gpio, StepperWaveformTransmitter *tx, motor_config_
     tx->add_stepper(fr);
     tx->add_stepper(br);
     tx->add_stepper(bl);
+    last_motion = std::chrono::high_resolution_clock::now();
 }
 
 WheelDriver::~WheelDriver()
@@ -36,7 +37,9 @@ void WheelDriver::start()
 
 void WheelDriver::stop()
 {
-    gpioWrite(config.en_pin, 1);
+    // The driver-enable line is active high.  Deassert it before waiting for
+    // worker threads so a terminating process cannot leave the motors powered.
+    gpioWrite(config.en_pin, 0);
 
     stop_flag = true;
     thr->join();
@@ -92,6 +95,12 @@ chassis_position_t WheelDriver::get_position()
 void WheelDriver::set_motor_enable(bool enabled)
 {
     motor_en = enabled;
+}
+
+void WheelDriver::stop_for_command_timeout()
+{
+    set_velocity(chassis_speeds_t{0.0, 0.0, 0.0});
+    set_motor_enable(false);
 }
 
 void WheelDriver::thread_loop()

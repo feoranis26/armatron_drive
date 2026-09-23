@@ -2,13 +2,8 @@ cmake_minimum_required(VERSION 3.8)
 project(armatron_drive)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic -lpigpio -fsanitize=address -lasan)
+  add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
-
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/" ${CMAKE_MODULE_PATH})
-
-add_compile_options(-fsanitize=address)
-add_link_options(-fsanitize=address)
 
 
 # find dependencies
@@ -23,6 +18,11 @@ target_link_libraries(main pigpio)
 install(TARGETS
   main
   DESTINATION lib/${PROJECT_NAME})
+
+install(PROGRAMS
+  scripts/run-armatron-drive
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 # uncomment the following section in order to fill in
 # further dependencies manually.

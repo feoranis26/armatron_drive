@@ -1,0 +1,16 @@
+[Unit]
+Description=ARMATRON mecanum motor controller
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Environment=ARMATRON_WORKSPACE=/home/feoranis/dev_ws
+ExecStart=/home/feoranis/dev_ws/install/armatron_drive/lib/armatron_drive/run-armatron-drive taskset -c 3 ros2 run armatron_drive main
+KillSignal=SIGINT
+TimeoutStopSec=15
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

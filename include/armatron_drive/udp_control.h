@@ -6,7 +6,9 @@
 #include <arpa/inet.h> 
 #include <netinet/in.h> 
 #include <bits/stdc++.h> 
-#include <stdlib.h> 
+#include <stdlib.h>
+#include <atomic>
+#include <cstdint>
 
 #include "whl_driver.h"
 
@@ -33,7 +35,9 @@ private:
     int port;
 
     bool connected = false;
-    bool stop_flag = false;
+    std::atomic<bool> stop_flag{false};
+    std::atomic<bool> command_timed_out{false};
+    std::atomic<std::int64_t> last_command_ms{0};
 
     thread *send_thread = nullptr;
     thread *recv_thread = nullptr;

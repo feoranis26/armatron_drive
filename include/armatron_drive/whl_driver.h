@@ -2,6 +2,7 @@
 #define WHL_DRIVER
 
 #include "stepper.h"
+#include <atomic>
 #include <chrono>
 
 #define SPEED_EPSILON 0.01
@@ -52,6 +53,7 @@ public:
     chassis_position_t get_position();
 
     void set_motor_enable(bool enabled);
+    void stop_for_command_timeout();
 
 private:
     void thread_loop();
@@ -60,9 +62,9 @@ private:
     driver_config_t config;
 
     thread *thr = nullptr;
-    bool stop_flag = false;
+    std::atomic<bool> stop_flag{false};
 
-    bool motor_en = false;
+    std::atomic<bool> motor_en{false};
 
     chassis_speeds_t tgt_speed;
     std::chrono::_V2::system_clock::time_point last_motion;

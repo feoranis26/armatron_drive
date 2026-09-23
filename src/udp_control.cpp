@@ -6,6 +6,8 @@ UDPControl::UDPControl(WheelDriver *driver, int port)
     this->port = port;
 
     memset(&recv_addr, 0, sizeof(recv_addr));
+    last_command_ms.store(std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count());
 }
 
 void UDPControl::start()
@@ -51,6 +53,12 @@ void UDPControl::send_thread_loop()
 {
     while (!stop_flag)
     {
+        const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+        if (!command_timed_out.load() && now_ms - last_command_ms.load() > 500) {
+            driver->stop_for_command_timeout();
+            command_timed_out.store(true);
+        }
         send_telemetry();
 
         sleep_for(milliseconds(100));
@@ -121,6 +129,10 @@ void UDPControl::proc_recv()
         double th = atof(args[3].c_str());
 
         driver->set_velocity(chassis_speeds_t{x, y, th});
+        driver->set_motor_enable(true);
+        last_command_ms.store(std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count());
+        command_timed_out.store(false);
     }
 }
 
